@@ -5,28 +5,26 @@ branding:
   icon: git-pull-request
   color: blue
 
-on:
-  workflow_call:
-    inputs:
-      upstream:
-        type: string
-        description: <user>/<repo> or the full HTTP URL
-        required: false
-      branch:
-        type: string
-        description: The upstream branch that is rebased from
-        required: false
-        default:  master
-      push:
-        type: boolean
-        description: Do the force push in this action
-        required: false
-        default:  true
-      token:
-        type: string
-        description: GitHub Access Token
-        required: true
-        default:  ${{ github.token }}
+inputs:
+  upstream:
+    type: string
+    description: <user>/<repo> or the full HTTP URL
+    required: false
+  branch:
+    type: string
+    description: The upstream branch that is rebased from
+    required: false
+    default:  master
+  push:
+    type: boolean
+    description: Do the force push in this action
+    required: false
+    default:  true
+  token:
+    type: string
+    description: GitHub Access Token
+    required: true
+    default:  ${{ github.token }}
 
 permissions:
   contents: write
