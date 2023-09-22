@@ -31,10 +31,9 @@ on:
 permissions:
   contents: write
 
-jobs:
-  rebaser:
-    runs-on: ubuntu-latest
-    steps:
+runs:
+  using: composite
+  steps:
     - name: Main
       shell: bash
       run: |
