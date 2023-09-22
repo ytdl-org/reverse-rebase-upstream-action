@@ -7,9 +7,9 @@ This Action is suitable if you:
 * want to keep changes based on the latest upstream
 
 The Action rebases your branch on to the upstream branch and commits that as your branch, with new commits from upstream appended. 
-
-In contrast, rebasing the upstream branch onto your branch causes your local changes to be reapplied after new upstream commits. 
 If there are conflicts, it simply fails.
+
+In contrast, rebasing the upstream branch onto your branch causes your local changes to be reapplied after new upstream commits.
 
 ## Typical usage
 
