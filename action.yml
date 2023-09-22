@@ -1,60 +1,74 @@
-name: Rebase Upstream
-description: Use git rebase to sync with upstream
-author: imba-tjd
+name: Reverse Rebase from Upstream
+description: Use git rebase to append new upstream commits
+# inverted logic from imba-tjd/rebase-on-upstream
 branding:
   icon: git-pull-request
   color: blue
 
-inputs:
-  upstream:
-    description: <user>/<repo> or the full HTTP URL
-    required: false
-  branch:
-    description: The upstream branch that is rebased on
-    required: false
-    default:  master
-  depth:
-    description: Greater than the number of commits the upstream made in a period
-    required: false
-    default:  100
-  push:
-    description: Do the force push in this action
-    required: false
-    default:  true
-  token:
-    description: GitHub Access Token
-    required: true
-    default:  ${{ github.token }}
+on:
+  workflow_call:
+    inputs:
+      upstream:
+        type: string
+        description: <user>/<repo> or the full HTTP URL
+        required: false
+      branch:
+        type: string
+        description: The upstream branch that is rebased from
+        required: false
+        default:  master
+      push:
+        type: boolean
+        description: Do the force push in this action
+        required: false
+        default:  true
+      token:
+        type: string
+        description: GitHub Access Token
+        required: true
+        default:  ${{ github.token }}
 
-runs:
-  using: composite
-  steps:
-    - run: |
-        set -ex;
+permissions:
+  contents: write
 
-        UPSTREAM=${{ inputs.upstream }};
-        if [ -z $UPSTREAM ]; then
-            echo ${{ inputs.token }} | gh auth login --with-token;
-            UPSTREAM=$(gh api repos/:owner/:repo --jq .parent.full_name);
-            if [ -z $UPSTREAM ]; then echo "Can't find upstream" >&2 && exit 1; fi;
-        fi;
-        if [ ! $(echo $UPSTREAM | egrep '^(http|git@)') ]; then
-            UPSTREAM=https://github.com/$UPSTREAM.git
-        fi;
-        if [ ${{ inputs.depth }} -ne 0 ]; then
-            DEPTH=--depth=${{ inputs.depth }}
-        fi;
-
-        git remote add upstream $UPSTREAM;
-
-        git fetch upstream ${{ inputs.branch }} $DEPTH;
-
-        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com";
-        git config --local user.name  "GitHub Actions";
-
-        git rebase upstream/${{ inputs.branch }};
-
-        if [ "${{ inputs.push }}" = "true" -a "$(git status | grep diverged)" ]; then
-            git push origin $(git branch --show-current) --force-with-lease;
-        fi;
+jobs:
+  rebaser:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Main
       shell: bash
+      run: |
+        set -ex
+        # Starting with current git branch (TARGET), get the UPSTREAM branch
+        # as a temporary branch; rebase TARGET onto it; if that differs from TARGET,
+        # make it the TARGET and push the result, if the remote hasn't changed.
+        # Effect: commits specific to the TARGET repo stay in place; new UPSTREAM
+        # commits are appended
+        TARGET_SHA=$(git rev-parse HEAD)
+        TARGET=$(git name-rev --name-only "$TARGET_SHA")
+        if [ -z "$TARGET" ]; then echo "Can't find current branch" >&2; exit 1; fi
+        UPSTREAM=${{ inputs.upstream }}
+        if [ -z "$UPSTREAM" ]; then
+          echo "${{ inputs.token }}" | gh auth login --with-token
+          UPSTREAM=$(gh api repos/:owner/:repo --jq .parent.full_name
+          if [ -z "$UPSTREAM" ]; then echo "Can't find upstream" >&2 && exit 1; fi
+        fi
+        if ! echo "$UPSTREAM" | grep -E '^(http|git@)'; then
+          UPSTREAM=https://github.com/$UPSTREAM.git
+        fi
+        git remote add -f -t "${{ inputs.branch }}" --tags upstream "$UPSTREAM"
+        REBASE=${TARGET}-rebase
+        trap '{ git checkout "$TARGET"; git branch -D "$REBASE"; }' EXIT
+        git checkout -B  "$REBASE" --no-track "upstream/${{ inputs.branch }}" 
+        git config --local user.email "rebaser+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name  "GitHub Actions"
+        # rebase new UPSTREAM commits onto TARGET
+        UPSTREAM_SHA=$(git rev-parse HEAD)
+        git rebase "refs/heads/${TARGET}"
+        if [ -n "$(git log --max-count 1 --oneline "HEAD...${TARGET}")"  ]; then
+          git branch -M "$REBASE" "$TARGET"
+          if [ "${{ inputs.push }}" = true ]; then
+            # rebase changed TARGET: push if remote TARGET unchanged
+            git push origin --force-with-lease="${TARGET}"
+          fi
+        fi
