@@ -47,7 +47,7 @@ runs:
         UPSTREAM=${{ inputs.upstream }}
         if [ -z "$UPSTREAM" ]; then
           echo "${{ inputs.token }}" | gh auth login --with-token
-          UPSTREAM=$(gh api repos/:owner/:repo --jq .parent.full_name
+          UPSTREAM=$(gh api repos/:owner/:repo --jq .parent.full_name)
           if [ -z "$UPSTREAM" ]; then echo "Can't find upstream" >&2 && exit 1; fi
         fi
         if ! echo "$UPSTREAM" | grep -E '^(http|git@)'; then
