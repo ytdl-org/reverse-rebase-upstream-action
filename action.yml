@@ -8,7 +8,7 @@ branding:
 inputs:
   upstream:
     type: string
-    description: <user>/<repo> or the full HTTP URL
+    description: <user>/<repo> or full HTTP URL; default is parent repo
     required: false
   branch:
     type: string
@@ -42,7 +42,7 @@ runs:
         # Effect: commits specific to the TARGET repo stay in place; new UPSTREAM
         # commits are appended
         TARGET_SHA=$(git rev-parse HEAD)
-        TARGET=$(git name-rev --name-only "$TARGET_SHA")
+        TARGET=$(git name-rev --name-only --exclude='tags/*' "$TARGET_SHA")
         if [ -z "$TARGET" ]; then echo "Can't find current branch" >&2; exit 1; fi
         UPSTREAM=${{ inputs.upstream }}
         if [ -z "$UPSTREAM" ]; then
@@ -61,7 +61,6 @@ runs:
         git config --local user.email "rebaser+github-actions[bot]@users.noreply.github.com"
         git config --local user.name  "GitHub Actions"
         # rebase new UPSTREAM commits onto TARGET
-        UPSTREAM_SHA=$(git rev-parse HEAD)
         git rebase "refs/heads/${TARGET}"
         if [ -n "$(git log --max-count 1 --oneline "HEAD...${TARGET}")"  ]; then
           git branch -M "$REBASE" "$TARGET"
