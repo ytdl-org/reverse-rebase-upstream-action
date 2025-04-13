@@ -25,6 +25,10 @@ inputs:
     description: GitHub Access Token
     required: true
     default:  ${{ github.token }}
+  rebase-args:
+    type: string
+    description: Additional parameters for rebase
+    required: false
 
 permissions:
   contents: write
@@ -57,11 +61,11 @@ runs:
         REBASE=${TARGET}-rebase
         # avoid leaving an unwanted branch "$REBASE"
         trap '{ git checkout "$TARGET"; git branch -D "$REBASE" || true; }' EXIT
-        git checkout -B  "$REBASE" --no-track "upstream/${{ inputs.branch }}" 
+        git checkout -B  "$REBASE" --no-track "upstream/${{ inputs.branch }}"
         git config --local user.email "rebaser+github-actions[bot]@users.noreply.github.com"
         git config --local user.name  "GitHub Actions"
-        # rebase new UPSTREAM commits onto TARGET
-        git rebase "refs/heads/${TARGET}"
+        # rebase new UPSTREAM commits onto TARGET: prefer TARGET  conflicts
+        git rebase ${{ inputs.rebase-args }} "refs/heads/${TARGET}"
         if [ -n "$(git log --max-count 1 --oneline "HEAD...${TARGET}")"  ]; then
           git branch -M "$REBASE" "$TARGET"
           if [ "${{ inputs.push }}" = true ]; then

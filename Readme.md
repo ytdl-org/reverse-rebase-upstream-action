@@ -6,10 +6,14 @@ This Action is suitable if you:
 * have changes that are not going to be merged into upstream
 * want to keep changes based on the latest upstream
 
-The Action rebases your branch on to the upstream branch and commits that as your branch, with new commits from upstream appended. 
-If there are conflicts, it simply fails.
+The Action rebases your branch on to the upstream branch and commits that
+as your branch, with new commits from upstream appended. 
+If there are conflicts, it simply fails (or specify a merge option using
+`rebase-args: ...`: eg, `-X ours` to resolve conflicts with the `ort` strategy,
+preferring changes from your branch when resolution fails).
 
-In contrast, rebasing the upstream branch onto your branch causes your local changes to be reapplied after new upstream commits.
+In contrast, rebasing the upstream branch onto your branch causes your
+local changes to be reapplied after new upstream commits.
 
 ## Typical usage
 
